@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Threat Dashboard</title>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  <script crossorigin src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const { useState, useEffect } = React;
+
+    const ThreatDashboard = () => {
+      const [threats, setThreats] = useState([]);
+      const socket = io("http://localhost:5000");
+
+      useEffect(() => {
+        axios.get("/api/threats").then((res) => setThreats(res.data));
+        socket.on("newThreat", (newThreat) => setThreats((prev) => [newThreat, ...prev]));
+        socket.on("updateThreat", (updatedThreat) => {
+          setThreats((prev) => prev.map(t => t._id === updatedThreat._id ? updatedThreat : t));
+        });
+        socket.on("deleteThreat", (id) => {
+          setThreats((prev) => prev.filter(t => t._id !== id));
+        });
+        return () => {
+          socket.off("newThreat");
+          socket.off("updateThreat");
+          socket.off("deleteThreat");
+        };
+      }, []);
+
+      const addThreat = () => {
+        const newThreat = {
+          severity: "High",
+          ipAddress: "192.168.1.100",
+          threatType: "DDoS Attack",
+        };
+        axios.post("/api/threats", newThreat);
+      };
+
+      return (
+        React.createElement("div", null,
+          React.createElement("h1", null, "Real-Time Threat Dashboard"),
+          React.createElement("button", { onClick: addThreat }, "Simulate Threat"),
+          React.createElement("ul", null, threats.map((t) =>
+            React.createElement("li", { key: t._id },
+              t.timestamp, " | ", t.severity, " | ", t.ipAddress, " | ", t.threatType,
+              React.createElement("button", { onClick: () => updateThreat(t._id) }, "Update"),
+              React.createElement("button", { onClick: () => deleteThreat(t._id) }, "Delete")
+            )
+          ))
+        )
+      );
+    };
+
+    ReactDOM.render(
+      React.createElement(ThreatDashboard),
+      document.getElementById("root")
+    );
+  </script>
+</body>
+</html>

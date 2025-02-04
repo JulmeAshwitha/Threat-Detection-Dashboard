@@ -1,0 +1,213 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Threat Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    .container {
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+    .login, .dashboard {
+      display: none;
+    }
+    .login.active, .dashboard.active {
+      display: block;
+    }
+    .login {
+      text-align: center;
+      margin-top: 50px;
+    }
+    .login input {
+      margin: 10px 0;
+      padding: 10px;
+      width: 300px;
+    }
+    .login button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #333;
+      color: #fff;
+      padding: 10px 20px;
+    }
+    .search-bar {
+      display: flex;
+      align-items: center;
+    }
+    .search-bar input {
+      padding: 5px;
+      margin-right: 10px;
+    }
+    .notifications {
+      cursor: pointer;
+      position: relative;
+    }
+    .notification-count {
+      background-color: red;
+      color: white;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 12px;
+      position: absolute;
+      top: -5px;
+      right: -5px;
+    }
+    .graph, .threats {
+      margin-top: 20px;
+    }
+    #threatList {
+      list-style: none;
+      padding: 0;
+    }
+    #threatList li {
+      background: #fff;
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+    canvas {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Login Section --> 
+    <div class="login active" id="login">
+      <h1>Login</h1>
+      <input type="text" id="username" placeholder="Username" /><br />
+      <input type="password" id="password" placeholder="Password" /><br />
+      <button onclick="handleLogin()">Login</button>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+      <div class="header">
+        <h2>Threat Dashboard</h2>
+        <div class="search-bar">
+          <input type="text" id="searchBar" placeholder="Search threats" oninput="handleSearch()" />
+          <div class="notifications" onclick="showNotifications()">
+            Notifications <span class="notification-count" id="notificationCount">0</span>
+          </div>
+        </div>
+      </div>
+      <div class="graph">
+        <h3>Threat Severity Distribution</h3>
+        <canvas id="threatGraph" width="600" height="300"></canvas>
+      </div>
+      <div class="threats">
+        <h3>Threat List</h3>
+        <ul id="threatList"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const threats = [
+      { id: 1, timestamp: '2024-11-17 10:00', severity: 'High', ipAddress: '192.168.1.100', threatType: 'DDoS Attack' },
+      { id: 2, timestamp: '2024-11-17 10:30', severity: 'Medium', ipAddress: '10.0.0.5', threatType: 'SQL Injection' },
+      { id: 3, timestamp: '2024-11-17 11:00', severity: 'Low', ipAddress: '172.16.0.1', threatType: 'Phishing' }
+    ];
+
+    const notifications = [];
+
+    function handleLogin() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      if (username === 'admin' && password === 'password') {
+        document.getElementById('login').classList.remove('active');
+        document.getElementById('dashboard').classList.add('active');
+        renderThreats(threats);
+        updateGraph();
+      } else {
+        alert('Invalid login credentials!');
+      }
+    }
+
+    function renderThreats(list) {
+      const threatList = document.getElementById('threatList');
+      threatList.innerHTML = '';
+      list.forEach(t => {
+        const li = document.createElement('li');
+        li.textContent = `${t.timestamp} | Severity: ${t.severity} | IP: ${t.ipAddress} | Type: ${t.threatType}`;
+        threatList.appendChild(li);
+      });
+    }
+
+    function handleSearch() {
+      const query = document.getElementById('searchBar').value.toLowerCase();
+      const filteredThreats = threats.filter(t =>
+        t.severity.toLowerCase().includes(query) ||
+        t.ipAddress.includes(query) ||
+        t.threatType.toLowerCase().includes(query)
+      );
+      renderThreats(filteredThreats);
+    }
+
+    function updateGraph() {
+      const ctx = document.getElementById('threatGraph').getContext('2d');
+      const severityCounts = threats.reduce((acc, t) => {
+        acc[t.severity] = (acc[t.severity] || 0) + 1;
+        return acc;
+      }, {});
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(severityCounts),
+          datasets: [{
+            label: 'Number of Threats',
+            data: Object.values(severityCounts),
+            backgroundColor: ['red', 'orange', 'green']
+          }]
+        }
+      });
+    }
+
+    function showNotifications() {
+      notifications.push('New threat detected');
+      alert(notifications.join('\n'));
+      document.getElementById('notificationCount').textContent = '0';
+    }
+
+    // Simulate new threats
+    setInterval(() => {
+      const newThreat = {
+        id: threats.length + 1,
+        timestamp: new Date().toISOString(),
+        severity: ['High', 'Medium', 'Low'][Math.floor(Math.random() * 3)],
+        ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
+        threatType: ['DDoS Attack', 'Phishing', 'SQL Injection'][Math.floor(Math.random() * 3)]
+      };
+      threats.unshift(newThreat);
+      notifications.push('New threat detected');
+      document.getElementById('notificationCount').textContent = notifications.length;
+      renderThreats(threats);
+      updateGraph();
+    }, 10000);
+  </script>
+
+  <!-- Include Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html> 
+ 
